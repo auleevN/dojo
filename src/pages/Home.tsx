@@ -48,13 +48,24 @@ export default function Home({ user }: HomeProps) {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             {user ? (
-              <Link 
-                to="/members" 
-                className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center space-x-2 transition-all hover:scale-105"
-              >
-                <Play size={20} fill="currentColor" />
-                <span>Accéder aux Vidéos</span>
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link 
+                  to="/members" 
+                  className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center space-x-2 transition-all hover:scale-105"
+                >
+                  <Play size={20} fill="currentColor" />
+                  <span>Accéder aux Vidéos</span>
+                </Link>
+                {user.role === 'admin' && (
+                  <Link 
+                    to="/admin" 
+                    className="bg-zinc-800 hover:bg-zinc-700 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center space-x-2 transition-all border border-zinc-700"
+                  >
+                    <ShieldCheck size={20} />
+                    <span>Administration</span>
+                  </Link>
+                )}
+              </div>
             ) : (
               <>
                 <Link 

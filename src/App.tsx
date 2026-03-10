@@ -28,9 +28,20 @@ export default function App() {
         try {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
-            setUser({ uid: firebaseUser.uid, ...userDoc.data() } as UserProfile);
+            const data = userDoc.data();
+            const isAdminEmail = firebaseUser.email === 'olivier.mobilebox@gmail.com';
+            setUser({ 
+              uid: firebaseUser.uid, 
+              ...data, 
+              role: isAdminEmail ? 'admin' : (data.role || 'member') 
+            } as UserProfile);
           } else {
-            setUser({ uid: firebaseUser.uid, email: firebaseUser.email!, role: 'member' });
+            const isAdminEmail = firebaseUser.email === 'olivier.mobilebox@gmail.com';
+            setUser({ 
+              uid: firebaseUser.uid, 
+              email: firebaseUser.email!, 
+              role: isAdminEmail ? 'admin' : 'member' 
+            });
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
@@ -157,7 +168,7 @@ export default function App() {
             <Route path="/login" element={!user ? <Login /> : <Navigate to="/members" />} />
             <Route path="/register" element={!user ? <Register /> : <Navigate to="/members" />} />
             
-            <Route path="/members" element={user ? <MemberZone /> : <Navigate to="/login" />} />
+            <Route path="/members" element={user ? <MemberZone user={user} /> : <Navigate to="/login" />} />
             <Route path="/video/:id" element={user ? <VideoDetail /> : <Navigate to="/login" />} />
             <Route path="/profile" element={user ? <Profile user={user} setUser={setUser} /> : <Navigate to="/login" />} />
             
@@ -166,9 +177,16 @@ export default function App() {
         </main>
 
         <footer className="border-t border-zinc-800 py-8 mt-auto">
-          <div className="max-w-7xl mx-auto px-4 text-center text-zinc-500 text-sm">
-            <p>&copy; {new Date().getFullYear()} Dojo Connect. Tous droits réservés.</p>
-            <p className="mt-2 italic">L'excellence par la discipline et le respect.</p>
+          <div className="max-w-7xl mx-auto px-4 text-center text-zinc-500 text-sm space-y-4">
+            <div className="flex justify-center space-x-6">
+              <Link to="/" className="hover:text-white transition-colors">Accueil</Link>
+              {user && <Link to="/members" className="hover:text-white transition-colors">Vidéos</Link>}
+              {user?.role === 'admin' && <Link to="/admin" className="text-red-500 hover:text-red-400 transition-colors font-medium">Administration</Link>}
+            </div>
+            <div>
+              <p>&copy; {new Date().getFullYear()} Dojo Connect. Tous droits réservés.</p>
+              <p className="mt-2 italic">L'excellence par la discipline et le respect.</p>
+            </div>
           </div>
         </footer>
       </div>

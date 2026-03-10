@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Video, VIDEO_CATEGORIES } from '../types';
+import { Video, VIDEO_CATEGORIES, UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../firestoreUtils';
 import { Link } from 'react-router-dom';
-import { Play, Clock, Tag, Search, Filter, Video as VideoIcon } from 'lucide-react';
+import { Play, Clock, Tag, Search, Filter, Video as VideoIcon, Shield } from 'lucide-react';
 import { motion } from 'motion/react';
 
-export default function MemberZone() {
+interface MemberZoneProps {
+  user: UserProfile;
+}
+
+export default function MemberZone({ user }: MemberZoneProps) {
   const [videos, setVideos] = useState<Video[]>([]);
   const [filteredVideos, setFilteredVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,9 +62,21 @@ export default function MemberZone() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-4">
-        <h1 className="text-3xl font-bold tracking-tight">Vidéos d'Entraînement</h1>
-        <p className="text-zinc-400">Accédez à l'ensemble des techniques et tutoriels du club.</p>
+      <header className="space-y-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Vidéos d'Entraînement</h1>
+          <p className="text-zinc-400">Accédez à l'ensemble des techniques et tutoriels du club.</p>
+        </div>
+        {/* Admin shortcut */}
+        {user.role === 'admin' && window.location.pathname !== '/admin' && (
+          <Link 
+            to="/admin" 
+            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 transition-all border border-zinc-700"
+          >
+            <Shield size={16} className="text-red-500" />
+            <span>Gérer la collection</span>
+          </Link>
+        )}
       </header>
 
       {/* Filters */}
