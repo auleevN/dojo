@@ -74,7 +74,7 @@ export default function App() {
       <Router>
         <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans">
           {/* Navigation */}
-          <nav className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur-md sticky top-0 z-50">
+          <nav className="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
               <div className="flex items-center">
@@ -93,7 +93,7 @@ export default function App() {
                   <>
                     <Link to="/members" className="hover:text-red-500 transition-colors">Vidéos</Link>
                     {user.role === 'admin' && (
-                      <Link to="/admin" className="flex items-center space-x-1 text-red-500 hover:text-red-400 font-medium">
+                      <Link to="/admin" className="flex items-center space-x-1 text-red-500 hover:text-red-400 font-medium bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20 transition-all">
                         <Shield size={16} />
                         <span>Admin</span>
                       </Link>

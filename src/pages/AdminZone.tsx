@@ -3,7 +3,7 @@ import { collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot, query, order
 import { db } from '../firebase';
 import { Video, VIDEO_CATEGORIES, UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../firestoreUtils';
-import { Plus, Trash2, Edit2, Video as VideoIcon, Users, Settings, X, Save, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Video as VideoIcon, Users, Settings, X, Save, AlertCircle, Search, Shield } from 'lucide-react';
 
 export default function AdminZone() {
   const [videos, setVideos] = useState<Video[]>([]);
@@ -12,6 +12,9 @@ export default function AdminZone() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
+  const [urlError, setUrlError] = useState('');
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -62,6 +65,8 @@ export default function AdminZone() {
   }, []);
 
   const handleOpenModal = (video?: Video) => {
+    setUrlError('');
+    setGlobalError(null);
     if (video) {
       setEditingVideo(video);
       setFormData({
@@ -75,7 +80,7 @@ export default function AdminZone() {
     } else {
       setEditingVideo(null);
       setFormData({
-        title: '',
+        title: 'Nouvelle technique',
         description: '',
         category: VIDEO_CATEGORIES[0],
         url: '',
@@ -88,38 +93,60 @@ export default function AdminZone() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate URL
+    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+    const vimeoRegex = /^(https?:\/\/)?(www\.)?(vimeo\.com)\/.+$/;
+    
+    if (!youtubeRegex.test(formData.url) && !vimeoRegex.test(formData.url)) {
+      setUrlError('Veuillez entrer une URL YouTube ou Vimeo valide');
+      return;
+    }
+    
+    setUrlError('');
+    setGlobalError(null);
     try {
+      const finalData = {
+        ...formData,
+        title: formData.title.trim() || 'Vidéo sans titre',
+      };
+
       if (editingVideo) {
         await updateDoc(doc(db, 'videos', editingVideo.id), {
-          ...formData,
+          ...finalData,
           updatedAt: serverTimestamp()
         });
       } else {
         await addDoc(collection(db, 'videos'), {
-          ...formData,
+          ...finalData,
           createdAt: serverTimestamp()
         });
       }
       setIsModalOpen(false);
     } catch (err) {
+      setGlobalError("Erreur lors de l'enregistrement de la vidéo. Vérifiez votre connexion ou vos permissions.");
       handleFirestoreError(err, OperationType.WRITE, editingVideo ? `videos/${editingVideo.id}` : 'videos');
     }
   };
 
   const handleDeleteVideo = async (id: string) => {
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cette vidéo ?")) {
+      setGlobalError(null);
       try {
         await deleteDoc(doc(db, 'videos', id));
       } catch (err) {
+        setGlobalError("Erreur lors de la suppression de la vidéo.");
         handleFirestoreError(err, OperationType.DELETE, `videos/${id}`);
       }
     }
   };
 
   const handleChangeRole = async (uid: string, newRole: 'member' | 'admin') => {
+    setGlobalError(null);
     try {
       await updateDoc(doc(db, 'users', uid), { role: newRole });
     } catch (err) {
+      setGlobalError("Erreur lors du changement de rôle de l'utilisateur.");
       handleFirestoreError(err, OperationType.UPDATE, `users/${uid}`);
     }
   };
@@ -154,6 +181,11 @@ export default function AdminZone() {
     }
   };
 
+  const filteredUsers = users.filter(user => 
+    user.email.toLowerCase().includes(userSearch.toLowerCase()) || 
+    (user.displayName && user.displayName.toLowerCase().includes(userSearch.toLowerCase()))
+  );
+
   if (loading) return <div className="text-center py-20">Chargement...</div>;
 
   return (
@@ -165,10 +197,17 @@ export default function AdminZone() {
         </div>
         <div className="flex items-center space-x-4">
           <button 
+            onClick={() => handleOpenModal()}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-medium flex items-center space-x-2 transition-all shadow-lg shadow-red-900/20"
+          >
+            <Plus size={18} />
+            <span>Ajouter une vidéo</span>
+          </button>
+          <button 
             onClick={handleSeedData}
             className="text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 px-3 py-1 rounded-lg transition-all"
           >
-            Initialiser données de test
+            Initialiser données
           </button>
           <div className="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800">
             <button 
@@ -189,17 +228,22 @@ export default function AdminZone() {
         </div>
       </header>
 
+      {globalError && (
+        <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-xl flex items-center justify-between text-red-200">
+          <div className="flex items-center space-x-3">
+            <AlertCircle size={20} />
+            <span>{globalError}</span>
+          </div>
+          <button onClick={() => setGlobalError(null)} className="text-red-400 hover:text-red-200">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
       {activeTab === 'videos' ? (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">{videos.length} Vidéos</h2>
-            <button 
-              onClick={() => handleOpenModal()}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-medium flex items-center space-x-2 transition-all"
-            >
-              <Plus size={18} />
-              <span>Ajouter une vidéo</span>
-            </button>
           </div>
 
           <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
@@ -227,9 +271,11 @@ export default function AdminZone() {
                       </button>
                       <button 
                         onClick={() => handleDeleteVideo(video.id)}
-                        className="p-2 text-zinc-400 hover:text-red-500 hover:bg-red-900/20 rounded-lg transition-all"
+                        className="inline-flex items-center space-x-1 p-2 text-zinc-400 hover:text-red-500 hover:bg-red-900/20 rounded-lg transition-all"
+                        title="Supprimer la vidéo"
                       >
                         <Trash2 size={16} />
+                        <span className="text-xs font-medium">Supprimer</span>
                       </button>
                     </td>
                   </tr>
@@ -240,44 +286,87 @@ export default function AdminZone() {
         </div>
       ) : (
         <div className="space-y-6">
-          <h2 className="text-xl font-bold">{users.length} Membres</h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-xl font-bold">{filteredUsers.length} Membres</h2>
+            <div className="relative w-full md:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+              <input 
+                type="text"
+                placeholder="Rechercher un membre..."
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-10 pr-4 py-2 focus:ring-2 focus:ring-red-600 outline-none transition-all"
+              />
+            </div>
+          </div>
+
           <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden">
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-zinc-800 text-zinc-500 text-sm uppercase tracking-wider">
-                  <th className="px-6 py-4 font-medium">Nom</th>
+                  <th className="px-6 py-4 font-medium">Membre</th>
                   <th className="px-6 py-4 font-medium">Email</th>
-                  <th className="px-6 py-4 font-medium">Rôle</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  <th className="px-6 py-4 font-medium">Rôle Actuel</th>
+                  <th className="px-6 py-4 font-medium text-right">Modifier le Rôle</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {users.map(user => (
+                {filteredUsers.map(user => (
                   <tr key={user.uid} className="hover:bg-zinc-800/30 transition-colors">
-                    <td className="px-6 py-4 font-medium">{user.displayName || 'Sans nom'}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center text-zinc-400 font-bold">
+                          {(user.displayName || user.email)[0].toUpperCase()}
+                        </div>
+                        <span className="font-medium">{user.displayName || 'Sans nom'}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-zinc-400">{user.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase ${user.role === 'admin' ? 'bg-red-900/30 text-red-500' : 'bg-zinc-800 text-zinc-400'}`}>
-                        {user.role}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        user.role === 'admin' 
+                          ? 'bg-red-900/20 text-red-500 border border-red-500/20' 
+                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                      }`}>
+                        {user.role === 'admin' ? 'Administrateur' : 'Membre'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <select 
-                        value={user.role}
-                        onChange={(e) => handleChangeRole(user.uid, e.target.value as any)}
-                        className="bg-zinc-950 border border-zinc-800 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-600"
-                      >
-                        <option value="member">Membre</option>
-                        <option value="admin">Admin</option>
-                      </select>
+                      <div className="flex justify-end items-center space-x-2">
+                        <Shield size={14} className={user.role === 'admin' ? 'text-red-500' : 'text-zinc-600'} />
+                        <select 
+                          value={user.role}
+                          onChange={(e) => handleChangeRole(user.uid, e.target.value as any)}
+                          className="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-600 transition-all cursor-pointer hover:border-zinc-700"
+                        >
+                          <option value="member">Membre</option>
+                          <option value="admin">Administrateur</option>
+                        </select>
+                      </div>
                     </td>
                   </tr>
                 ))}
+                {filteredUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-12 text-center text-zinc-500">
+                      Aucun membre trouvé pour "{userSearch}"
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       )}
+
+      {/* Floating Action Button for Quick Add */}
+      <button 
+        onClick={() => handleOpenModal()}
+        className="fixed bottom-8 right-8 z-50 bg-red-600 hover:bg-red-700 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-2xl hover:scale-110 transition-all active:scale-95 group"
+        title="Ajouter une vidéo"
+      >
+        <Plus size={28} className="group-hover:rotate-90 transition-transform duration-300" />
+      </button>
 
       {/* Modal Video */}
       {isModalOpen && (
@@ -298,8 +387,11 @@ export default function AdminZone() {
                     <input 
                       required
                       value={formData.url}
-                      onChange={e => setFormData({...formData, url: e.target.value})}
-                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none"
+                      onChange={e => {
+                        setFormData({...formData, url: e.target.value});
+                        if (urlError) setUrlError('');
+                      }}
+                      className={`flex-1 bg-zinc-950 border ${urlError ? 'border-red-500' : 'border-zinc-800'} rounded-xl px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none transition-colors`}
                       placeholder="https://www.youtube.com/watch?v=..."
                     />
                     <button 
@@ -313,6 +405,12 @@ export default function AdminZone() {
                       Actualiser
                     </button>
                   </div>
+                  {urlError && (
+                    <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                      <AlertCircle size={12} />
+                      {urlError}
+                    </p>
+                  )}
                 </div>
 
                 {formData.thumbnail && (
