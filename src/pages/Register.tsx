@@ -39,8 +39,10 @@ export default function Register() {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
         setError('Cet email est déjà utilisé. Connectez-vous avec "bonjour".');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('L\'inscription par Email/Mot de passe n\'est pas activée dans la console Firebase. Activez-la dans Authentication > Sign-in method.');
       } else {
-        setError('Une erreur est survenue lors de l\'inscription.');
+        setError(`Une erreur est survenue lors de l'inscription : ${err.message}`);
       }
     } finally {
       setLoading(false);

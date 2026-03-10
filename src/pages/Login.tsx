@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail,
+  signInWithPopup,
+  GoogleAuthProvider
+} from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import { LogIn, Mail, Lock, AlertCircle, CheckCircle, Chrome } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +19,37 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const navigate = useNavigate();
+
+  const handleGoogleLogin = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // Check if user profile exists
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      if (!userDoc.exists()) {
+        await setDoc(doc(db, 'users', user.uid), {
+          email: user.email,
+          displayName: user.displayName,
+          role: user.email === 'olivier.mobilebox@gmail.com' ? 'admin' : 'member',
+          createdAt: serverTimestamp()
+        });
+      }
+      navigate('/members');
+    } catch (err: any) {
+      console.error('Google Login Error:', err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError('La connexion Google n\'est pas activée dans la console Firebase.');
+      } else {
+        setError(`Erreur Google : ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +78,9 @@ export default function Login() {
         } catch (signInErr: any) {
           console.log('SignIn Error Code:', signInErr.code);
           
-          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/user-disabled') {
+          if (signInErr.code === 'auth/operation-not-allowed') {
+            setError('La connexion par Email/Mot de passe n\'est pas activée dans la console Firebase. Activez-la dans Authentication > Sign-in method.');
+          } else if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/user-disabled') {
             try {
               const userCredential = await createUserWithEmailAndPassword(auth, email, devPassword);
               const user = userCredential.user;
@@ -55,7 +94,11 @@ export default function Login() {
               navigate('/members');
             } catch (createErr: any) {
               console.error('Create User Error:', createErr);
-              setError(`Erreur lors de la création du compte : ${createErr.code || createErr.message}`);
+              if (createErr.code === 'auth/operation-not-allowed') {
+                setError('L\'inscription par Email/Mot de passe n\'est pas activée dans la console Firebase.');
+              } else {
+                setError(`Erreur lors de la création du compte : ${createErr.code || createErr.message}`);
+              }
             }
           } else {
             setError(`Erreur Firebase : ${signInErr.code || signInErr.message}`);
@@ -142,6 +185,29 @@ export default function Login() {
             >
               {loading ? 'Chargement...' : (resetMode ? 'Envoyer le lien' : 'Se connecter')}
             </button>
+            
+            {!resetMode && (
+              <>
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-zinc-800"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="px-2 bg-zinc-900 text-zinc-500 uppercase tracking-wider">Ou</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  disabled={loading}
+                  className="w-full bg-white hover:bg-zinc-200 text-black font-bold py-3 rounded-xl transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <Chrome size={18} />
+                  <span>Continuer avec Google</span>
+                </button>
+              </>
+            )}
             
             {resetMode && (
               <button
