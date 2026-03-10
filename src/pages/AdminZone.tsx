@@ -105,6 +105,34 @@ export default function AdminZone() {
     }
   };
 
+  const handleSeedData = async () => {
+    try {
+      // First video (previous request)
+      await addDoc(collection(db, 'videos'), {
+        title: "Vidéo de test Arts Martiaux",
+        description: "Vidéo de démonstration pour tester le lecteur et l'accès membre.",
+        category: "Débutants",
+        url: "https://www.youtube.com/watch?v=EP9NSTy-yZQ",
+        duration: "3:45",
+        createdAt: serverTimestamp()
+      });
+
+      // Second video (new request)
+      await addDoc(collection(db, 'videos'), {
+        title: "Introduction au Dojo",
+        description: "Bienvenue au club ! Cette vidéo explique les bases du Dojo, le salut, et les règles de courtoisie essentielles pour bien débuter votre pratique.",
+        category: "Débutants",
+        url: "https://www.youtube.com/watch?v=6p_yaNFSYao",
+        duration: "1:30",
+        createdAt: serverTimestamp()
+      });
+
+      alert("Vidéos de test ajoutées avec succès !");
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'videos');
+    }
+  };
+
   if (loading) return <div className="text-center py-20">Chargement...</div>;
 
   return (
@@ -114,21 +142,29 @@ export default function AdminZone() {
           <h1 className="text-3xl font-bold tracking-tight">Administration</h1>
           <p className="text-zinc-400">Gérez les vidéos et les membres du club.</p>
         </div>
-        <div className="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+        <div className="flex items-center space-x-4">
           <button 
-            onClick={() => setActiveTab('videos')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${activeTab === 'videos' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+            onClick={handleSeedData}
+            className="text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-800 px-3 py-1 rounded-lg transition-all"
           >
-            <VideoIcon size={18} />
-            <span>Vidéos</span>
+            Initialiser données de test
           </button>
-          <button 
-            onClick={() => setActiveTab('users')}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${activeTab === 'users' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
-          >
-            <Users size={18} />
-            <span>Membres</span>
-          </button>
+          <div className="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800">
+            <button 
+              onClick={() => setActiveTab('videos')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${activeTab === 'videos' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              <VideoIcon size={18} />
+              <span>Vidéos</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('users')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all ${activeTab === 'users' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+            >
+              <Users size={18} />
+              <span>Membres</span>
+            </button>
+          </div>
         </div>
       </header>
 

@@ -29,7 +29,6 @@ export default function Login() {
         setSuccess('Un email de réinitialisation a été envoyé.');
         setResetMode(false);
       } else {
-        // Check if password is 'bonjour' (Dev requirement)
         if (password !== devPassword) {
           setError('En phase de développement, le mot de passe doit être "bonjour".');
           setLoading(false);
@@ -37,31 +36,35 @@ export default function Login() {
         }
 
         try {
-          // Try to sign in
           await signInWithEmailAndPassword(auth, email, devPassword);
           navigate('/members');
         } catch (signInErr: any) {
-          // If user doesn't exist, auto-register (Dev convenience)
-          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, devPassword);
-            const user = userCredential.user;
-            
-            // Create user profile in Firestore
-            await setDoc(doc(db, 'users', user.uid), {
-              email: user.email,
-              role: email === 'olivier.mobilebox@gmail.com' ? 'admin' : 'member',
-              createdAt: serverTimestamp()
-            });
-            
-            navigate('/members');
+          console.log('SignIn Error Code:', signInErr.code);
+          
+          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential' || signInErr.code === 'auth/user-disabled') {
+            try {
+              const userCredential = await createUserWithEmailAndPassword(auth, email, devPassword);
+              const user = userCredential.user;
+              
+              await setDoc(doc(db, 'users', user.uid), {
+                email: user.email,
+                role: email === 'olivier.mobilebox@gmail.com' ? 'admin' : 'member',
+                createdAt: serverTimestamp()
+              });
+              
+              navigate('/members');
+            } catch (createErr: any) {
+              console.error('Create User Error:', createErr);
+              setError(`Erreur lors de la création du compte : ${createErr.code || createErr.message}`);
+            }
           } else {
-            throw signInErr;
+            setError(`Erreur Firebase : ${signInErr.code || signInErr.message}`);
           }
         }
       }
     } catch (err: any) {
-      console.error(err);
-      setError('Erreur de connexion. Assurez-vous d\'utiliser "bonjour".');
+      console.error('Global Login Error:', err);
+      setError(`Erreur de connexion : ${err.message}`);
     } finally {
       setLoading(false);
     }
