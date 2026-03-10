@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { Link, useNavigate } from 'react-router-dom';
 import { LogIn, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
@@ -19,22 +20,48 @@ export default function Login() {
     setSuccess('');
     setLoading(true);
 
+    // DEV PHASE BYPASS: Always use 'bonjour'
+    const devPassword = 'bonjour';
+
     try {
       if (resetMode) {
         await sendPasswordResetEmail(auth, email);
         setSuccess('Un email de réinitialisation a été envoyé.');
         setResetMode(false);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        navigate('/members');
+        // Check if password is 'bonjour' (Dev requirement)
+        if (password !== devPassword) {
+          setError('En phase de développement, le mot de passe doit être "bonjour".');
+          setLoading(false);
+          return;
+        }
+
+        try {
+          // Try to sign in
+          await signInWithEmailAndPassword(auth, email, devPassword);
+          navigate('/members');
+        } catch (signInErr: any) {
+          // If user doesn't exist, auto-register (Dev convenience)
+          if (signInErr.code === 'auth/user-not-found' || signInErr.code === 'auth/invalid-credential') {
+            const userCredential = await createUserWithEmailAndPassword(auth, email, devPassword);
+            const user = userCredential.user;
+            
+            // Create user profile in Firestore
+            await setDoc(doc(db, 'users', user.uid), {
+              email: user.email,
+              role: email === 'olivier.mobilebox@gmail.com' ? 'admin' : 'member',
+              createdAt: serverTimestamp()
+            });
+            
+            navigate('/members');
+          } else {
+            throw signInErr;
+          }
+        }
       }
     } catch (err: any) {
       console.error(err);
-      if (resetMode) {
-        setError('Impossible d\'envoyer l\'email. Vérifiez l\'adresse.');
-      } else {
-        setError('Email ou mot de passe incorrect.');
-      }
+      setError('Erreur de connexion. Assurez-vous d\'utiliser "bonjour".');
     } finally {
       setLoading(false);
     }
@@ -90,23 +117,16 @@ export default function Login() {
               <div className="flex justify-between items-center">
                 <label className="text-sm font-medium text-zinc-400 flex items-center space-x-2">
                   <Lock size={14} />
-                  <span>Mot de passe</span>
+                  <span>Mot de passe (Tapez 'bonjour')</span>
                 </label>
-                <button 
-                  type="button"
-                  onClick={() => setResetMode(true)}
-                  className="text-xs text-red-500 hover:underline"
-                >
-                  Oublié ?
-                </button>
               </div>
               <input
-                type="password"
+                type="text"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
-                placeholder="••••••••"
+                placeholder="bonjour"
               />
             </div>
           )}

@@ -18,8 +18,10 @@ export default function Register() {
     setError('');
     setLoading(true);
 
+    const devPassword = 'bonjour';
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, devPassword);
       const user = userCredential.user;
 
       await updateProfile(user, { displayName });
@@ -28,7 +30,7 @@ export default function Register() {
       await setDoc(doc(db, 'users', user.uid), {
         email,
         displayName,
-        role: 'member',
+        role: email === 'olivier.mobilebox@gmail.com' ? 'admin' : 'member',
         createdAt: new Date().toISOString()
       });
 
@@ -36,9 +38,7 @@ export default function Register() {
     } catch (err: any) {
       console.error(err);
       if (err.code === 'auth/email-already-in-use') {
-        setError('Cet email est déjà utilisé.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('Le mot de passe doit faire au moins 6 caractères.');
+        setError('Cet email est déjà utilisé. Connectez-vous avec "bonjour".');
       } else {
         setError('Une erreur est survenue lors de l\'inscription.');
       }
@@ -96,19 +96,10 @@ export default function Register() {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-zinc-400 flex items-center space-x-2">
-              <Lock size={14} />
-              <span>Mot de passe</span>
-            </label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all"
-              placeholder="6 caractères minimum"
-            />
+          <div className="p-4 bg-zinc-800/50 rounded-xl border border-zinc-700">
+            <p className="text-xs text-zinc-400 text-center">
+              Note : En phase de développement, le mot de passe est fixé à <span className="text-red-500 font-bold">bonjour</span> pour tout le monde.
+            </p>
           </div>
 
           <button
