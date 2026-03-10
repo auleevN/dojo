@@ -19,8 +19,25 @@ export default function AdminZone() {
     description: '',
     category: VIDEO_CATEGORIES[0],
     url: '',
-    duration: ''
+    duration: '',
+    thumbnail: ''
   });
+
+  const getYoutubeThumbnail = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://img.youtube.com/vi/${match[2]}/maxresdefault.jpg`;
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    if (formData.url && !formData.thumbnail) {
+      const thumb = getYoutubeThumbnail(formData.url);
+      if (thumb) setFormData(prev => ({ ...prev, thumbnail: thumb }));
+    }
+  }, [formData.url]);
 
   useEffect(() => {
     const qv = query(collection(db, 'videos'), orderBy('createdAt', 'desc'));
@@ -52,7 +69,8 @@ export default function AdminZone() {
         description: video.description || '',
         category: video.category,
         url: video.url,
-        duration: video.duration || ''
+        duration: video.duration || '',
+        thumbnail: video.thumbnail || ''
       });
     } else {
       setEditingVideo(null);
@@ -61,7 +79,8 @@ export default function AdminZone() {
         description: '',
         category: VIDEO_CATEGORIES[0],
         url: '',
-        duration: ''
+        duration: '',
+        thumbnail: ''
       });
     }
     setIsModalOpen(true);
@@ -113,6 +132,7 @@ export default function AdminZone() {
         description: "Vidéo de démonstration pour tester le lecteur et l'accès membre.",
         category: "Débutants",
         url: "https://www.youtube.com/watch?v=EP9NSTy-yZQ",
+        thumbnail: "https://img.youtube.com/vi/EP9NSTy-yZQ/maxresdefault.jpg",
         duration: "3:45",
         createdAt: serverTimestamp()
       });
@@ -123,6 +143,7 @@ export default function AdminZone() {
         description: "Bienvenue au club ! Cette vidéo explique les bases du Dojo, le salut, et les règles de courtoisie essentielles pour bien débuter votre pratique.",
         category: "Débutants",
         url: "https://www.youtube.com/watch?v=6p_yaNFSYao",
+        thumbnail: "https://img.youtube.com/vi/6p_yaNFSYao/maxresdefault.jpg",
         duration: "1:30",
         createdAt: serverTimestamp()
       });
@@ -272,6 +293,43 @@ export default function AdminZone() {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2 space-y-1">
+                  <label className="text-sm text-zinc-500">URL de la vidéo (YouTube, Vimeo, etc.)</label>
+                  <div className="flex gap-2">
+                    <input 
+                      required
+                      value={formData.url}
+                      onChange={e => setFormData({...formData, url: e.target.value})}
+                      className="flex-1 bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                    />
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const thumb = getYoutubeThumbnail(formData.url);
+                        if (thumb) setFormData({...formData, thumbnail: thumb});
+                      }}
+                      className="px-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-xs transition-all"
+                    >
+                      Actualiser
+                    </button>
+                  </div>
+                </div>
+
+                {formData.thumbnail && (
+                  <div className="col-span-2 space-y-1">
+                    <label className="text-sm text-zinc-500">Aperçu de la miniature</label>
+                    <div className="relative aspect-video rounded-xl overflow-hidden border border-zinc-800">
+                      <img 
+                        src={formData.thumbnail} 
+                        alt="Aperçu" 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="col-span-2 space-y-1">
                   <label className="text-sm text-zinc-500">Titre</label>
                   <input 
                     required
@@ -304,13 +362,12 @@ export default function AdminZone() {
                 </div>
 
                 <div className="col-span-2 space-y-1">
-                  <label className="text-sm text-zinc-500">URL de la vidéo (YouTube, Vimeo, etc.)</label>
+                  <label className="text-sm text-zinc-500">URL miniature (optionnel)</label>
                   <input 
-                    required
-                    value={formData.url}
-                    onChange={e => setFormData({...formData, url: e.target.value})}
+                    value={formData.thumbnail}
+                    onChange={e => setFormData({...formData, thumbnail: e.target.value})}
                     className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 focus:ring-2 focus:ring-red-600 outline-none"
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    placeholder="https://..."
                   />
                 </div>
 

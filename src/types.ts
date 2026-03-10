@@ -13,6 +13,7 @@ export interface Video {
   description?: string;
   category: string;
   url: string;
+  thumbnail?: string;
   duration?: string;
   createdAt: any; // Firestore Timestamp
 }

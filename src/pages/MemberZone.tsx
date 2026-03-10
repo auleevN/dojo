@@ -104,10 +104,10 @@ export default function MemberZone() {
                 to={`/video/${video.id}`}
                 className="group block bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 hover:border-red-600/50 transition-all hover:shadow-lg hover:shadow-red-900/10"
               >
-                {/* Thumbnail Placeholder */}
+                {/* Thumbnail */}
                 <div className="aspect-video bg-zinc-800 relative overflow-hidden">
                   <img 
-                    src={`https://picsum.photos/seed/${video.id}/640/360`} 
+                    src={video.thumbnail || `https://picsum.photos/seed/${video.id}/640/360`} 
                     alt={video.title}
                     className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition-transform duration-500"
                     referrerPolicy="no-referrer"
